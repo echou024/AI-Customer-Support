@@ -12,4 +12,4 @@ B
 - Implement RAG so the chatbot responds based on a given knowledge base with Pinecone
 
 C
-- Deploy web-app to AWS EC2 servers
+- Deploy web-app to AWS EC2 servers (or Netlify if that doesn't work)
