@@ -8,8 +8,8 @@ A
 
 B
 - user uploads textbook pdf
-- Respond to the user with LLMs through the Llama 3.1 API
-- Implement RAG so the chatbot responds based on a given knowledge base with Pinecone
+- Respond to the user with LLMs through the LLM API
+- Implement RAG so the chatbot responds based on a given knowledge base with Langchain
 
 C
 - Deploy web-app to AWS EC2 servers (or Netlify if that doesn't work)
