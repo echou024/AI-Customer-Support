@@ -7,6 +7,7 @@ A
 - Save chat history in database so user has access to prev chats also in Firebase
 
 B
+- user uploads textbook pdf
 - Respond to the user with LLMs through the Llama 3.1 API
 - Implement RAG so the chatbot responds based on a given knowledge base with Pinecone
 
