@@ -1,113 +1,145 @@
-import Image from "next/image";
+'use client'
+
+import { useState, useEffect,useCallback } from 'react'
 
 export default function Home() {
+  const [messages, setMessages] = useState<Array<{ text: string; isUser: boolean }>>([])
+  const [inputText, setInputText] = useState('')
+  const [isThinking, setIsThinking] = useState(false);
+  const [currentTypingIndex, setCurrentTypingIndex] = useState(-1)
+  const [displayedText, setDisplayedText] = useState('')
+
+  const typeEffect = useCallback((text: string, index: number) => {
+    if (index < text.length) {
+      setDisplayedText((prev) => prev + text.charAt(index))
+      setTimeout(() => typeEffect(text, index + 1), 25) // Adjust the timeout for faster/slower typing
+    } else {
+      setCurrentTypingIndex(-1) // Reset typing index when done
+    }
+  }, [])
+
+  useEffect(() => {
+    if (currentTypingIndex !== -1 && messages[currentTypingIndex]) {
+      setDisplayedText('')
+      typeEffect(messages[currentTypingIndex].text, 0)
+    }
+  }, [currentTypingIndex, messages, typeEffect])
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!inputText.trim()) return
+
+    // Add user message to chat
+    setMessages(prev => [...prev, { text: inputText, isUser: true }])
+    setInputText('')
+    setIsThinking(true)
+
+    try {
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: inputText }),
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch response')
+      }
+
+      const data = await response.json()
+      
+      // Add bot response to chat
+      setMessages(prev => {
+        const newMessages = [...prev, { text: data.reply, isUser: false }]
+        setCurrentTypingIndex(newMessages.length - 1) // Set the index of the new message
+        return newMessages
+      })
+    } catch (error) {
+      console.error('Error:', error)
+      setMessages(prev => [...prev, { text: 'Sorry, there was an error processing your request.', isUser: false }])
+    } finally {
+      setIsThinking(false)
+    }
+
+  }
+  useEffect(() => {
+    // Scroll to bottom of message container
+    const messageContainer = document.getElementById('message-container')
+    if (messageContainer) {
+      messageContainer.scrollTop = messageContainer.scrollHeight
+    }
+  }, [messages, isThinking, displayedText])
+
+
   return (
-    <main className="flex min-h-screen flex-col items-center justify-between p-24">
-      <div className="z-10 w-full max-w-5xl items-center justify-between font-mono text-sm lg:flex">
-        <p className="fixed left-0 top-0 flex w-full justify-center border-b border-gray-300 bg-gradient-to-b from-zinc-200 pb-6 pt-8 backdrop-blur-2xl dark:border-neutral-800 dark:bg-zinc-800/30 dark:from-inherit lg:static lg:w-auto  lg:rounded-xl lg:border lg:bg-gray-200 lg:p-4 lg:dark:bg-zinc-800/30">
-          Get started by editing&nbsp;
-          <code className="font-mono font-bold">src/app/page.tsx</code>
-        </p>
-        <div className="fixed bottom-0 left-0 flex h-48 w-full items-end justify-center bg-gradient-to-t from-white via-white dark:from-black dark:via-black lg:static lg:size-auto lg:bg-none">
-          <a
-            className="pointer-events-none flex place-items-center gap-2 p-8 lg:pointer-events-auto lg:p-0"
-            href="https://vercel.com?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            By{" "}
-            <Image
-              src="/vercel.svg"
-              alt="Vercel Logo"
-              className="dark:invert"
-              width={100}
-              height={24}
-              priority
-            />
-          </a>
+    <main className="flex min-h-screen flex-col items-center justify-between p-24 bg-gradient-to-br from-blue-300 to-purple-800 ">
+      <div className="z-10 w-full max-w-5xl items-center justify-between font-arial text-sm">
+      <div className="flex items-center justify-center mb-8">
+  <h1 className="text-4xl font-bold text-white flex items-center title">
+    AI Health ChatBot
+    <svg className="w-8 h-8 ml-3 inline-block" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M17 8C8 10 5.9 16.17 3.82 21.34L5.71 22L6.66 19.7C7.14 19.87 7.64 20 8 20C19 20 22 3 22 3C21 5 14 5.25 9 6.25C4 7.25 2 11.5 2 13.5C2 15.5 3.75 17.25 3.75 17.25C7 8 17 8 17 8Z" fill="white"/>
+    </svg>
+    </h1>
+      </div>
+        <div className="bg-white shadow-lg rounded-lg max-w-lg w-full mx-auto bg-opacity-70 chat-container-3d">
+          <div className="h-[500px] overflow-y-auto p-4 space-y-4">
+            {messages.map((message, index) => (
+              <div key={index} className={`flex ${message.isUser ? 'justify-end' : 'justify-start'}`}>
+                <div className={`max-w-xs rounded-lg p-3 ${message.isUser ? 'bg-violet-400 text-white' : 'bg-gray-500'}`}>
+                  {index === currentTypingIndex ? displayedText:message.text}
+                </div>
+              </div>
+            ))}
+            {isThinking && (
+              <div className="flex justify-start animate-bounce">
+                <div className="bg-gray-500 text-white rounded-lg p-3 flex space-x-1">
+                  <div className="w-2 h-2 bg-white rounded-full animate-bounce"></div>
+                  <div className="w-2 h-2 bg-white rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                  <div className="w-2 h-2 bg-white rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></div>
+                </div>
+          </div>
+           )}
+          </div>
+          <form onSubmit={handleSubmit} className="p-4 border-t input-container">
+            <div className="flex space-x-2">
+              <input
+                type="text"
+                value={inputText}
+                onChange={(e) => setInputText(e.target.value)}
+                className="flex-1 border rounded-lg p-2 text-black"
+                placeholder="Type your message..."
+              />
+              <button type="submit" className="bg-violet-400 text-white rounded-lg px-4 py-2">
+                Send
+              </button>
+            </div>
+          </form>
         </div>
       </div>
+      <style jsx>{`
+        
+        .chat-container-3d {
+          box-shadow: 
+            0 2px 4px rgba(0,0,0,0.1),
+            0 4px 8px rgba(0,0,0,0.1),
+            0 8px 16px rgba(0,0,0,0.1),
+            0 16px 32px rgba(0,0,0,0.1);
+          transform: translateY(-4px);
+          transition: all 0.3s ease-in-out;
+        }
+        .chat-container-3d:hover {
+          box-shadow: 
+            0 4px 8px rgba(0,0,0,0.12),
+            0 8px 16px rgba(0,0,0,0.12),
+            0 16px 32px rgba(0,0,0,0.12),
+            0 32px 64px rgba(0,0,0,0.12);
+          transform: translateY(-6px);
 
-      <div className="relative z-[-1] flex place-items-center before:absolute before:h-[300px] before:w-full before:-translate-x-1/2 before:rounded-full before:bg-gradient-radial before:from-white before:to-transparent before:blur-2xl before:content-[''] after:absolute after:-z-20 after:h-[180px] after:w-full after:translate-x-1/3 after:bg-gradient-conic after:from-sky-200 after:via-blue-200 after:blur-2xl after:content-[''] before:dark:bg-gradient-to-br before:dark:from-transparent before:dark:to-blue-700 before:dark:opacity-10 after:dark:from-sky-900 after:dark:via-[#0141ff] after:dark:opacity-40 sm:before:w-[480px] sm:after:w-[240px] before:lg:h-[360px]">
-        <Image
-          className="relative dark:drop-shadow-[0_0_0.3rem_#ffffff70] dark:invert"
-          src="/next.svg"
-          alt="Next.js Logo"
-          width={180}
-          height={37}
-          priority
-        />
-      </div>
-
-      <div className="mb-32 grid text-center lg:mb-0 lg:w-full lg:max-w-5xl lg:grid-cols-4 lg:text-left">
-        <a
-          href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className="mb-3 text-2xl font-semibold">
-            Docs{" "}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className="m-0 max-w-[30ch] text-sm opacity-50">
-            Find in-depth information about Next.js features and API.
-          </p>
-        </a>
-
-        <a
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className="mb-3 text-2xl font-semibold">
-            Learn{" "}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className="m-0 max-w-[30ch] text-sm opacity-50">
-            Learn about Next.js in an interactive course with&nbsp;quizzes!
-          </p>
-        </a>
-
-        <a
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className="mb-3 text-2xl font-semibold">
-            Templates{" "}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className="m-0 max-w-[30ch] text-sm opacity-50">
-            Explore starter templates for Next.js.
-          </p>
-        </a>
-
-        <a
-          href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className="mb-3 text-2xl font-semibold">
-            Deploy{" "}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className="m-0 max-w-[30ch] text-balance text-sm opacity-50">
-            Instantly deploy your Next.js site to a shareable URL with Vercel.
-          </p>
-        </a>
-      </div>
+          
+          
+        }
+     
+      `}</style>
     </main>
-  );
+  )
 }
